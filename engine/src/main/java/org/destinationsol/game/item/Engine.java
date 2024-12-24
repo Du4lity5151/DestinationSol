@@ -123,9 +123,9 @@ public class Engine implements SolItem {
             JSONObject rootNode = Validator.getValidatedJSON(engineName, "engine:schemaEngine");
 
             boolean isBig = rootNode.getBoolean("big");
-            float rotationAcceleration = isBig ? 100f : 515f;
-            float acceleration = 2f;
-            float maxRotationSpeed = isBig ? 40f : 230f;
+            float rotationAcceleration = (float) rootNode.optDouble("rotationAcceleration", isBig ? 100f : 515f);
+            float acceleration = (float) rootNode.optDouble("acceleration", 2f);
+            float maxRotationSpeed = (float) rootNode.optDouble("maxRotationSpeed", isBig ? 40f : 230f);
 
             // TODO: VAMPCAT: The icon / displayName was initially set to null. Is that correct?
 
