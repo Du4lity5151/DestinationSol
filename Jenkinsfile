@@ -33,36 +33,42 @@ pipeline {
         }
         stage('Build Android') {
             steps {
-                writeFile file: 'local.properties', text: 'sdk.dir=/opt/android-sdk'
-                sh 'pwd'
-                sh 'ls -la'
-                sh 'cat local.properties'
-                dir('android') {
-                    script {
-                        // Allow varying from the default Android repo path for easier development. Assume same Android branch as engine branch.
-                        def androidGitPath = "https://github.com/MovingBlocks/DestSolAndroid.git"
-                        if (env.PUBLISH_ORG) {
-                            androidGitPath = androidGitPath.replace("MovingBlocks", env.PUBLISH_ORG)
-                            println "Updated target Android Git path to: " + androidGitPath
-                        } else {
-                            println "Not varying the Android path from default " + androidGitPath
+                // Set the ANDROID_HOME environment variable
+                withEnv(['ANDROID_HOME=/opt/android-sdk']) {
+
+                    writeFile file: 'local.properties', text: 'sdk.dir=/opt/android-sdk'
+
+                    sh 'echo "ANDROID_HOME is: $ANDROID_HOME"'
+                    sh 'pwd'
+                    sh 'ls -la'
+                    sh 'cat local.properties'
+                    dir('android') {
+                        script {
+                            // Allow varying from the default Android repo path for easier development. Assume same Android branch as engine branch.
+                            def androidGitPath = "https://github.com/MovingBlocks/DestSolAndroid.git"
+                            if (env.PUBLISH_ORG) {
+                                androidGitPath = androidGitPath.replace("MovingBlocks", env.PUBLISH_ORG)
+                                println "Updated target Android Git path to: " + androidGitPath
+                            } else {
+                                println "Not varying the Android path from default " + androidGitPath
+                            }
+                            // Figure out a suitable target branch in the Android repo, default is the develop branch
+                            def androidBranch = "develop"
+                            // Check to see if Jenkins is building a tag, branch, or other (including PRs)
+                            if (env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+.*/) {
+                                println "Going to use target Android tag " + env.TAG_NAME
+                                androidBranch = "refs/tags/" + env.TAG_NAME
+                            } else if (env.BRANCH_NAME.equalsIgnoreCase("master") || env.BRANCH_NAME.startsWith("android/")) {
+                                println "Going to use target unusual Android branch " + env.BRANCH_NAME
+                                androidBranch = env.BRANCH_NAME
+                            } else {
+                                println "Going to use target Android branch 'develop' - not building 'master' nor anything starting with 'android/'"
+                            }
+                            checkout scm: [$class: 'GitSCM', branches: [[name: androidBranch]], extensions: [], userRemoteConfigs: [[credentialsId: 'GooeyHub', url: androidGitPath]]]
                         }
-                        // Figure out a suitable target branch in the Android repo, default is the develop branch
-                        def androidBranch = "develop"
-                        // Check to see if Jenkins is building a tag, branch, or other (including PRs)
-                        if (env.TAG_NAME != null && env.TAG_NAME ==~ /v\d+\.\d+\.\d+.*/) {
-                            println "Going to use target Android tag " + env.TAG_NAME
-                            androidBranch = "refs/tags/" + env.TAG_NAME
-                        } else if (env.BRANCH_NAME.equalsIgnoreCase("master") || env.BRANCH_NAME.startsWith("android/")) {
-                            println "Going to use target unusual Android branch " + env.BRANCH_NAME
-                            androidBranch = env.BRANCH_NAME
-                        } else {
-                            println "Going to use target Android branch 'develop' - not building 'master' nor anything starting with 'android/'"
-                        }
-                        checkout scm: [$class: 'GitSCM', branches: [[name: androidBranch]], extensions: [], userRemoteConfigs: [[credentialsId: 'GooeyHub', url: androidGitPath]]]
                     }
+                    sh './gradlew :android:assembleDebug'
                 }
-                sh './gradlew :android:assembleDebug'
                 archiveArtifacts 'android/build/outputs/apk/debug/android-debug.apk'
             }
         }
