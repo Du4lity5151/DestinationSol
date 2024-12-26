@@ -34,6 +34,9 @@ pipeline {
         stage('Build Android') {
             steps {
                 writeFile file: 'local.properties', text: 'sdk.dir=/opt/android-sdk'
+                sh 'pwd'
+                sh 'ls -la'
+                sh 'cat local.properties'
                 dir('android') {
                     script {
                         // Allow varying from the default Android repo path for easier development. Assume same Android branch as engine branch.
