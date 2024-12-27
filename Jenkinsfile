@@ -1,6 +1,9 @@
 pipeline {
     agent {
-        label 'android'
+        kubernetes {
+            label 'android'
+            defaultContainer 'builder' // Use actual container with Android SDK present
+        }
     }
     stages {
         stage('Setup') {
