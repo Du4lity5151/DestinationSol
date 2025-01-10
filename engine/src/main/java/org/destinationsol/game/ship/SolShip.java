@@ -110,6 +110,9 @@ public class SolShip implements SolObject {
         if (myAbility != null) {
             myAbilityAwait = myAbility.getConfig().getRechargeTime();
         }
+        if (myHull.getEngine() != null && !myItemContainer.contains(myHull.getEngine())) {
+            myItemContainer.add(myHull.getEngine());
+        }
     }
 
     @Override
@@ -527,13 +530,11 @@ public class SolShip implements SolObject {
     public boolean maybeEquip(SolGame game, SolItem item, boolean secondarySlot, boolean equip) {
         if (!secondarySlot) {
             if (item instanceof Engine) {
-                Gdx.app.log("SolShip", "maybeEquip called for an engine item, can't do that!");
-                //throw new AssertionError("engine items not supported");
-
                 Engine ei = (Engine) item;
                 boolean ok = ei.isBig() == (myHull.config.getType() == HullConfig.Type.BIG);
                 if (ok && equip) {
                     myHull.setEngine(ei);
+                    ei.setEquipped(1);
                 }
                 return ok;
             }
@@ -581,9 +582,8 @@ public class SolShip implements SolObject {
     public boolean maybeUnequip(SolGame game, SolItem item, boolean secondarySlot, boolean unequip) {
         if (!secondarySlot) {
             if (myHull.getEngine() == item) {
-                Gdx.app.log("SolShip", "maybeUnequip called for an engine item, can't do that!");
-                //throw new AssertionError("engine items not supported");
                 if (unequip) {
+                    item.setEquipped(0);
                     myHull.setEngine(null);
                 }
                 return true;
@@ -654,6 +654,9 @@ public class SolShip implements SolObject {
 
     public void dropItem(SolGame game, SolItem item) {
         myItemContainer.remove(item);
+        if (item.isEquipped() > 0) {
+            maybeUnequip(game, item, true);
+        }
         throwLoot(game, item, false);
     }
 
